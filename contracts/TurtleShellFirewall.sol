@@ -132,7 +132,6 @@ contract TurtleShellFirewall is ITurtleShellFirewall {
         if (s_firewallData[msg.sender].firewallActive) {
             /// @dev check if the cooldown period has passed
             bool cooldownSurpassed = false;
-            console.log(block.number, s_firewallData[msg.sender].lastActivatedBlock, m_firewallConfig.cooldownPeriod);
             if (block.number - s_firewallData[msg.sender].lastActivatedBlock > m_firewallConfig.cooldownPeriod) {
                 _setFirewallStatus(false);
                 cooldownSurpassed = true;
@@ -150,7 +149,10 @@ contract TurtleShellFirewall is ITurtleShellFirewall {
         }
 
         bool triggerFirewall = _checkIfParameterUpdateExceedsThreshold(newParameter);
-        if (triggerFirewall) _setFirewallStatus(true);
+        if (triggerFirewall) {
+            _setFirewallStatus(true);
+            return true;
+        }
 
         _setParameter(newParameter);
         return triggerFirewall;

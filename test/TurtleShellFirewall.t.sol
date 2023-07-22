@@ -2,6 +2,7 @@
 pragma solidity ^0.8.19;
 
 import "forge-std/Test.sol";
+import "forge-std/console.sol";
 
 import { TurtleShellFirewall } from "../contracts/TurtleShellFirewall.sol";
 
@@ -93,24 +94,25 @@ contract TurtleShellFirewallTest is Test {
     }
 
     function testFuzz_setParameter_setsNewParameter(
-        uint256 blockNumber,
-        uint256 blockInterval,
-        uint8 thresholdPercentage,
         uint256 startParameter,
-        uint256 cooldownPeriod,
         uint256 newParameter
     )
         public
     {
-        vm.assume(thresholdPercentage <= 100 && thresholdPercentage != 0);
+        uint256 blockNumber = 10000;
+        uint256 blockInterval = 10;
+        uint8 thresholdPercentage = 100;
+        uint256 cooldownPeriod = 10;
+
         vm.assume(startParameter < type(uint256).max / thresholdPercentage);
-        vm.assume(blockInterval <= blockNumber);
-        vm.assume(cooldownPeriod <= blockNumber);
+
         vm.roll(blockNumber);
 
         turtleShellFirewall.setUserConfig(thresholdPercentage, blockInterval, startParameter, cooldownPeriod);
 
-        turtleShellFirewall.setParameter(newParameter);
+        bool triggered = turtleShellFirewall.setParameter(newParameter);
+        // outrule firewall being triggered (bc it will not update)
+        vm.assume(triggered == false);
         assertEq(turtleShellFirewall.getParameterOf(address(this)), newParameter);
 
         // TODO: check event being emitted
@@ -173,13 +175,17 @@ contract TurtleShellFirewallTest is Test {
 
         assertEq(turtleShellFirewall.setParameter(newParameter), true);
         assertEq(turtleShellFirewall.getFirewallStatusOf(address(this)), true);
-        assertEq(turtleShellFirewall.getParameterOf(address(this)), newParameter);
     }
 
-    function testFuzz_setParameter_deactivatesFirewallAfterCooldown(uint256 cooldownPeriod, uint256 blockInterval) public {
-        uint256 blockNumber = 10000;
+    function testFuzz_setParameter_deactivatesFirewallAfterCooldown(
+        uint256 cooldownPeriod,
+        uint256 blockInterval
+    )
+        public
+    {
+        uint256 blockNumber = 10_000;
         uint8 thresholdPercentage = 10;
-        uint256 startParameter = 10000000;
+        uint256 startParameter = 10_000_000;
         uint256 newParameter = startParameter;
 
         // vm.assume(startParameter < type(uint256).max / thresholdPercentage);
@@ -196,27 +202,27 @@ contract TurtleShellFirewallTest is Test {
         turtleShellFirewall.setUserConfig(thresholdPercentage, blockInterval, startParameter, cooldownPeriod);
         turtleShellFirewall.setFirewallStatus(true);
 
-        vm.roll(blockNumber+cooldownPeriod + 1);
+        vm.roll(blockNumber + cooldownPeriod + 1);
         turtleShellFirewall.setParameter(newParameter);
 
         // assertEq(turtleShellFirewall.getFirewallStatusOf(address(this)), false);
     }
 
     function testFuzz_increaseParameter_increasesParameter(
-        uint256 blockNumber,
-        uint256 blockInterval,
-        uint8 thresholdPercentage,
-        uint256 cooldownPeriod,
-        uint256 startParameter,
         uint256 increaseAmount
     )
         public
     {
-        vm.assume(thresholdPercentage <= 100 && thresholdPercentage != 0);
-        vm.assume(startParameter < type(uint256).max / thresholdPercentage);
-        vm.assume(increaseAmount < (type(uint256).max - startParameter));
-        vm.assume(blockInterval <= blockNumber);
-        vm.assume(cooldownPeriod <= blockNumber);
+        uint256 blockNumber = 1000;
+        uint256 blockInterval = 10;
+        uint8 thresholdPercentage = 100;
+        uint256 cooldownPeriod = 10;
+        uint256 startParameter = 10000000;
+
+        // assume that it doesn't reach startParameter, bc of 100% threshold
+        vm.assume(increaseAmount < startParameter);
+        
+        // uint256 increaseAmount = 10;
         vm.roll(blockNumber);
 
         turtleShellFirewall.setUserConfig(thresholdPercentage, blockInterval, startParameter, cooldownPeriod);
@@ -228,20 +234,20 @@ contract TurtleShellFirewallTest is Test {
     }
 
     function testFuzz_decreaseParameter_decreasesParameter(
-        uint256 blockNumber,
-        uint256 blockInterval,
-        uint8 thresholdPercentage,
-        uint256 cooldownPeriod,
-        uint256 startParameter,
         uint256 decreaseAmount
     )
         public
     {
-        vm.assume(thresholdPercentage <= 100 && thresholdPercentage != 0);
-        vm.assume(blockInterval <= blockNumber);
-        vm.assume(cooldownPeriod <= blockNumber);
-        vm.assume(startParameter < type(uint256).max / thresholdPercentage);
-        vm.assume(startParameter >= decreaseAmount);
+        uint256 blockNumber = 1000;
+        uint256 blockInterval = 10;
+        uint8 thresholdPercentage = 100;
+        uint256 cooldownPeriod = 10;
+        uint256 startParameter = 10000000;
+
+        // assume that it doesn't reach startParameter, bc of 100% threshold
+        vm.assume(decreaseAmount < startParameter);
+        
+        // uint256 increaseAmount = 10;
         vm.roll(blockNumber);
 
         turtleShellFirewall.setUserConfig(thresholdPercentage, blockInterval, startParameter, cooldownPeriod);
